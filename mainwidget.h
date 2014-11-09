@@ -90,7 +90,6 @@ private:
     GLuint *pixels;
 
     QMatrix4x4 projection;
-    QImage *TexImage;
 
     QVector2D mousePressPosition;
     QVector3D rotationAxis;

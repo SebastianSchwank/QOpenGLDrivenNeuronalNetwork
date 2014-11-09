@@ -49,10 +49,9 @@ MainWidget::MainWidget(QWidget *parent) :
     QGLWidget(parent),
     angularSpeed(0)
 {
-    setFixedSize(200,200);
+    setFixedSize(500,500);
 
     thisSize = this->size();
-    TexImage = new QImage(thisSize.width(),thisSize.height(),QImage::Format_ARGB32);
 }
 
 MainWidget::~MainWidget()
@@ -112,7 +111,7 @@ void MainWidget::timerEvent(QTimerEvent *)
 void MainWidget::initializeGL()
 {
     initializeGLFunctions();
-    qglClearColor(Qt::black);
+    qglClearColor(Qt::white);
     initShaders();
     initTextures();
 
@@ -169,6 +168,9 @@ void MainWidget::initTextures()
     // f.ex. texture coordinate (1.1, 1.2) is same as (0.1, 0.2)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+    // FeedbackTexture
+    pixels = new GLuint[thisSize.width()*thisSize.height()*4];
 }
 //! [4]
 
@@ -214,13 +216,13 @@ void MainWidget::paintGL()
     program.setUniformValue("texture", 0);
 
     // Use texture unit 0 which contains cube.png
-    program.setUniformValue("imageSize", TexImage->width());
+    program.setUniformValue("imageSize", thisSize.width());
 
     //Remove any previous transformations
     glLoadIdentity();
 
     //Move to rendering point
-    //glTranslatef( x, y, 0.f );
+    glTranslatef( -1.0, -1.0, 0.0f );
 
      //Set texture ID
      glBindTexture( GL_TEXTURE_2D, texture );
@@ -228,19 +230,18 @@ void MainWidget::paintGL()
     // Draw geometry
     //Render textured quad
     glBegin( GL_QUADS );
-        glTexCoord2f( 0.f, 0.f ); glVertex2f( -thisSize.width(), -thisSize.height() );
-        glTexCoord2f( 1.f, 0.f ); glVertex2f( thisSize.width(), -thisSize.height() );
-        glTexCoord2f( 1.f, 1.f ); glVertex2f( thisSize.width(), thisSize.height() );
-        glTexCoord2f( 0.f, 1.f ); glVertex2f( -thisSize.width(), thisSize.height() );
+        glTexCoord2f( 0.f, 0.f ); glVertex2f( 0, 0);
+        glTexCoord2f( 1.f, 0.f ); glVertex2f( 2.0, 0);
+        glTexCoord2f( 1.f, 1.f ); glVertex2f( 2.0, 2.0);
+        glTexCoord2f( 0.f, 1.f ); glVertex2f( 0, 2.0);
      glEnd();
 
 
     //geometries.drawCubeGeometry(&program);
 
     //Playground TexImage(thisSize.width(), thisSize.height());
-    pixels = new GLuint[thisSize.width()*thisSize.height()*4];
-    glReadPixels(0,0,thisSize.width(),thisSize.height(),GL_RGBA,
-                 GL_UNSIGNED_INT,pixels);
+    //glReadPixels(0,0,thisSize.width(),thisSize.height(),GL_RGBA,
+    //             GL_UNSIGNED_INT,pixels);
 
     //qDebug("%i , %i" ,TexImage->size().width(),TexImage->size().height());
 

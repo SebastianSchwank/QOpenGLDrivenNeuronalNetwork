@@ -9,9 +9,6 @@ uniform int imageSize;
 
 void main()
 {
-    vec4 color = texture2D(texture,gl_TexCoord[0].st*imageSize);
-
-    float
-
+    vec4 color = texture2D(texture,gl_TexCoord[0].st);
     gl_FragColor = color;
 }
