@@ -49,14 +49,15 @@ MainWidget::MainWidget(QWidget *parent) :
     QGLWidget(parent),
     angularSpeed(0)
 {
-    setFixedSize(500,500);
+    setFixedSize(neurons*2,neurons);
 
     thisSize = this->size();
 }
 
 MainWidget::~MainWidget()
 {
-    deleteTexture(texture);
+    deleteTexture(textureWeights);
+    deleteTexture(textureTraining);
 }
 
 //! [0]
@@ -155,8 +156,9 @@ void MainWidget::initTextures()
 {
     // Load cube.png image
     glEnable(GL_TEXTURE_2D);
-    Playground newPlay(thisSize.width(), thisSize.height());
-    texture = bindTexture(newPlay);
+
+    Playground textureInitalWeights(neurons);
+    textureWeights = bindTexture(textureInitalWeights);
 
     // Set nearest filtering mode for texture minification
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -170,7 +172,7 @@ void MainWidget::initTextures()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
     // FeedbackTexture
-    pixels = new GLuint[thisSize.width()*thisSize.height()*4];
+    pixelsRendered = new GLuint[neurons*neurons*2*4];
 }
 //! [4]
 
@@ -212,11 +214,21 @@ void MainWidget::paintGL()
     //program.setUniformValue("mvp_matrix", projection * matrix);
 //! [6]
 
-    // Use texture unit 0 which contains cube.png
+    QImage textureInitalTraining(neurons,2,QImage::Format_ARGB32);
+    for(unsigned int i = 0; i < neurons; i++){
+        textureInitalTraining.setPixel(i,0,i);
+        textureInitalTraining.setPixel(i,1,i*2);
+    }
+    textureTraining = bindTexture(textureInitalTraining);
+
+    // Use texture unit 0
     program.setUniformValue("texture", 0);
 
+    // Use texture unit 1
+    program.setUniformValue("IO",1);
+
     // Use texture unit 0 which contains cube.png
-    program.setUniformValue("imageSize", thisSize.width());
+    program.setUniformValue("imageSize", neurons);
 
     //Remove any previous transformations
     glLoadIdentity();
@@ -224,8 +236,12 @@ void MainWidget::paintGL()
     //Move to rendering point
     glTranslatef( -1.0, -1.0, 0.0f );
 
-     //Set texture ID
-     glBindTexture( GL_TEXTURE_2D, texture );
+    glActiveTexture(GL_TEXTURE0);
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, textureWeights);
+
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, textureTraining);
 
     // Draw geometry
     //Render textured quad

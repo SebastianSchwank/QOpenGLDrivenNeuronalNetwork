@@ -1,58 +1,87 @@
-//*Binäre Ereignisse
+ int sizeX = 200;
+ int sizeY = 200;
  
-class wuerfel{
-  float p;
-  
-  wuerfel(float p){
-    this.p = p;
-  }
-  
-  boolean wurf(){
-    float ergebniss = (random(10000)%(10000))/10000.0;
-    if(ergebniss > p) return true;
-    return false;
-  }
-  
-}
-
- int sizeX = 800;
- int sizeY = 800;
+ float weight1 = -0.3;
+ float weight2 = 0.7;
  
- float weight = 0.1;
+ float input1;
+ float input2;
  
- float input;
+ float output = 0.0;
  
- float outbuffer = 0;
+ float x = -1.0;
+ float y = -1.0;
  
-int cycleCounter = 0;
+ int i = 0;
  
 void setup()
 {
   size(sizeX, sizeY);
   background(0);
+  
+}
+
+void keyPressed(){
+  for(int i = 0; i < 20; i++){
+    train();
+  }
+  println("Net Trained 20 steps");
+}
+
+void train(){
+  
+  x = random(200)/100.0 - 1.0;
+  y = random(200)/100.0 - 1.0;
+  
+  float desiredOutput;
+  if( x+y < 0){
+    desiredOutput = 0.0;
+  }
+  else{
+    desiredOutput = 1.0;
+  }
+  
+  float summe = 0.0;
+  summe = weight1 * x;
+  summe += weight2 * y;
+  
+  output = (1.0/(1.0 + exp(-2.0 * summe))); // ACTIVATION FUNCTION
+  
+  float error = desiredOutput - output;
+  
+  //println(error);
+  
+  //fill(output*255);
+  //stroke(output*255);
+  //ellipse((x+1)*100, (y+1) * 100, 2,2);
+  
+  //BackPropagation
+    float deltaWeight1 = x * error;
+    float deltaWeight2 = y * error;
+  
+    weight1 = weight1 + deltaWeight1;
+    weight2 = weight2 + deltaWeight2;
 }
  
 void draw() {
   
-  if(cycleCounter == 0) input = 5;
-  else input = 0;
   
-  input = sin(cycleCounter/10.0);
-  //input = cycleCounter/10.0;
   
-  outbuffer = (outbuffer + input)*weight;
+  if(x > 1.0){ x = -1.0; y+=1.0/100;}
+  if(y > 1.0){ y = -1.0; background(0); train();}
+  if(i >= 100*100) { i = 0;}
   
-  //desired output
-  float odes = sin(cycleCounter/10.0);
-  //Learning Function
-  weight =  (odes-outbuffer);
+  float summe = 0.0;
+  summe = weight1 * x;
+  summe += weight2 * y;
   
-  stroke(255,0,0);
-  point(cycleCounter,outbuffer*5+400);
+  output = (1.0/(1.0 + exp(-2.0 * summe))); // ACTIVATION FUNCTION
   
-  stroke(0,255,0);
-  point(cycleCounter,input*5+200);
+  //println(error);
   
-  cycleCounter += 1;
-   
+  pixels[i] = (int)output*255;
+  
+  x += 1/100.0;
+  i += 1;
+  
 }

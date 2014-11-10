@@ -3,13 +3,14 @@
 
 #include <QImage>
 #include <QColor>
+#include <QVector>
 
 #include <qmath.h>
 
 class Playground : public QImage
 {
 public:
-    Playground(int width,int height);
+    Playground(unsigned int neurons);
 };
 
 #endif // PLAYGROUND_H

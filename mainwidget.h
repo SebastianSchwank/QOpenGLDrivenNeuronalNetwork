@@ -84,10 +84,11 @@ protected:
 private:
     QBasicTimer timer;
     QGLShaderProgram program;
+    unsigned int neurons = 500;
     //GeometryEngine geometries;
 
-    GLuint texture;
-    GLuint *pixels;
+    GLuint textureWeights,textureTraining;
+    GLuint *pixelsRendered;
 
     QMatrix4x4 projection;
 
