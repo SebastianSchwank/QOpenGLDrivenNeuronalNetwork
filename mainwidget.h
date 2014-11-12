@@ -44,12 +44,12 @@
 #include "geometryengine.h"
 
 #include <QGLWidget>
+#include <QGLShaderProgram>
 #include <QGLFunctions>
 #include <QMatrix4x4>
 #include <QQuaternion>
 #include <QVector2D>
 #include <QBasicTimer>
-#include <QGLShaderProgram>
 #include <QOpenGLFramebufferObject>
 
 #include <QScreen>
@@ -57,6 +57,7 @@
 #include <QDebug>
 
 #include <playground.h>
+#include <glann.h>
 
 
 class GeometryEngine;
@@ -83,21 +84,9 @@ protected:
 
 private:
     QBasicTimer timer;
-    QGLShaderProgram program;
-    unsigned int neurons = 500;
-    //GeometryEngine geometries;
+    unsigned int WSize = 501;
 
-    GLuint textureWeights,textureTraining;
-    GLuint *pixelsRendered;
-
-    QMatrix4x4 projection;
-
-    QVector2D mousePressPosition;
-    QVector3D rotationAxis;
-    qreal angularSpeed;
-    QQuaternion rotation;
-
-    QSize thisSize;
+    GLANN *mGLann;
 };
 
 #endif // MAINWIDGET_H

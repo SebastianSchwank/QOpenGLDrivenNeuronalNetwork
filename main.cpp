@@ -48,14 +48,22 @@
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
-    app.setApplicationName("cube");
+    app.setApplicationName("GLANN");
     app.setApplicationVersion("0.1");
 #ifndef QT_NO_OPENGL
-    MainWidget widget;
+    GLANN widget(500, new Playground(500));
     widget.show();
 #else
     QLabel note("OpenGL Support required");
     note.show();
 #endif
+
+    QVector<unsigned int> input;
+    for(int i = 0; i < input.size(); i++){
+        input.append(0);
+    }
+
+    while(widget.propagateInput());
+
     return app.exec();
 }

@@ -46,233 +46,66 @@
 
 
 MainWidget::MainWidget(QWidget *parent) :
-    QGLWidget(parent),
-    angularSpeed(0)
+    QGLWidget(parent)
 {
-    setFixedSize(neurons*2,neurons);
-
-    thisSize = this->size();
+    setFixedSize(WSize*2,WSize);
 }
 
 MainWidget::~MainWidget()
 {
-    deleteTexture(textureWeights);
-    deleteTexture(textureTraining);
 }
 
-//! [0]
 void MainWidget::mousePressEvent(QMouseEvent *e)
 {
-    // Save mouse press position
-    //mousePressPosition = QVector2D(e->localPos());
+
 }
 
 void MainWidget::mouseReleaseEvent(QMouseEvent *e)
 {
-    // Mouse release position - mouse press position
-    //QVector2D diff = QVector2D(e->localPos()) - mousePressPosition;
-
-    // Rotation axis is perpendicular to the mouse position difference
-    // vector
-    //QVector3D n = QVector3D(diff.y(), diff.x(), 0.0).normalized();
-
-    // Accelerate angular speed relative to the length of the mouse sweep
-    //qreal acc = diff.length() / 100.0;
-
-    // Calculate new rotation axis as weighted sum
-    //rotationAxis = (rotationAxis * angularSpeed + n * acc).normalized();
-
-    // Increase angular speed
-    //angularSpeed += acc;
 }
-//! [0]
 
-//! [1]
 void MainWidget::timerEvent(QTimerEvent *)
 {
     // Update scene
     update();
-
-    // Decrease angular speed (friction)
-    //angularSpeed *= 0.99;
-
-    // Stop rotation when speed goes below threshold
-    //if (angularSpeed < 0.01) {
-    //    angularSpeed = 0.0;
-    //} else {
-        // Update rotation
-    //    rotation = QQuaternion::fromAxisAndAngle(rotationAxis, angularSpeed) * rotation;
-
-        // Update scene
-        //updateGL();
-    //}
 }
 //! [1]
 
 void MainWidget::initializeGL()
 {
     initializeGLFunctions();
-    qglClearColor(Qt::white);
-    initShaders();
-    initTextures();
-
-//! [2]
-    // Enable depth buffer
-    //glEnable(GL_DEPTH_TEST);
-
-    // Enable back face culling
-    //glEnable(GL_CULL_FACE);
-//! [2]
-
-    //geometries.init();
-
+    qglClearColor(Qt::black);
     // Use QBasicTimer because its faster than QTimer
     timer.start(12, this);
+
+    //Init the GL-ANN
+    mGLann = new GLANN(WSize,new Playground(WSize));
+/*
+    QVector<unsigned int> input;
+    for(int i = 0; i < WSize; i++){
+        input.append(i);
+    }
+    mGLann->setInput(input);*/
 }
 
 //! [3]
 void MainWidget::initShaders()
 {
-    // Compile vertex shader
-    if (!program.addShaderFromSourceFile(QGLShader::Vertex, ":/vshader.glsl"))
-        close();
 
-    // Compile fragment shader
-    if (!program.addShaderFromSourceFile(QGLShader::Fragment, ":/fshader.glsl"))
-        close();
-
-    // Link shader pipeline
-    if (!program.link())
-        close();
-
-    // Bind shader pipeline for use
-    if (!program.bind())
-        close();
 }
-//! [3]
 
-//! [4]
 void MainWidget::initTextures()
 {
-    // Load cube.png image
-    glEnable(GL_TEXTURE_2D);
 
-    Playground textureInitalWeights(neurons);
-    textureWeights = bindTexture(textureInitalWeights);
-
-    // Set nearest filtering mode for texture minification
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-
-    // Set bilinear filtering mode for texture magnification
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    // Wrap texture coordinates by repeating
-    // f.ex. texture coordinate (1.1, 1.2) is same as (0.1, 0.2)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-    // FeedbackTexture
-    pixelsRendered = new GLuint[neurons*neurons*2*4];
 }
-//! [4]
 
-//! [5]
 void MainWidget::resizeGL(int w, int h)
 {
-
-
-    // Set OpenGL viewport to cover whole widget
-    glViewport(0, 0, w, h);
-    /*
-
-    // Calculate aspect ratio
-    qreal aspect = qreal(w) / qreal(h ? h : 1);
-
-    // Set near plane to 3.0, far plane to 7.0, field of view 45 degrees
-    const qreal zNear = 3.0, zFar = 7.0, fov = 45.0;
-
-    // Reset projection
-    projection.setToIdentity();
-
-    // Set perspective projection
-    projection.perspective(fov, aspect, zNear, zFar);
-    */
-
+    glViewport(0,0,w,h);
 }
-//! [5]
 
 void MainWidget::paintGL()
 {
-
-//! [6]
-    // Calculate model view transformation
-    //QMatrix4x4 matrix;
-    //matrix.translate(0.0, 0.0, +0.5);
-    //matrix.rotate(rotation);
-
-    // Set modelview-projection matrix
-    //program.setUniformValue("mvp_matrix", projection * matrix);
-//! [6]
-
-    QImage textureInitalTraining(neurons,2,QImage::Format_ARGB32);
-    for(unsigned int i = 0; i < neurons; i++){
-        textureInitalTraining.setPixel(i,0,i);
-        textureInitalTraining.setPixel(i,1,i*2);
-    }
-    textureTraining = bindTexture(textureInitalTraining);
-
-    // Use texture unit 0
-    program.setUniformValue("texture", 0);
-
-    // Use texture unit 1
-    program.setUniformValue("IO",1);
-
-    // Use texture unit 0 which contains cube.png
-    program.setUniformValue("imageSize", neurons);
-
-    //Remove any previous transformations
-    glLoadIdentity();
-
-    //Move to rendering point
-    glTranslatef( -1.0, -1.0, 0.0f );
-
-    glActiveTexture(GL_TEXTURE0);
-    glEnable(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, textureWeights);
-
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, textureTraining);
-
-    // Draw geometry
-    //Render textured quad
-    glBegin( GL_QUADS );
-        glTexCoord2f( 0.f, 0.f ); glVertex2f( 0, 0);
-        glTexCoord2f( 1.f, 0.f ); glVertex2f( 2.0, 0);
-        glTexCoord2f( 1.f, 1.f ); glVertex2f( 2.0, 2.0);
-        glTexCoord2f( 0.f, 1.f ); glVertex2f( 0, 2.0);
-     glEnd();
-
-
-    //geometries.drawCubeGeometry(&program);
-
-    //Playground TexImage(thisSize.width(), thisSize.height());
-    //glReadPixels(0,0,thisSize.width(),thisSize.height(),GL_RGBA,
-    //             GL_UNSIGNED_INT,pixels);
-
-    //qDebug("%i , %i" ,TexImage->size().width(),TexImage->size().height());
-
-/*
-    for(int i = 0; i < (thisSize.width()*thisSize.height()); i++){
-        QColor *color = new QColor(127.0 * (sin(pixels[i*4])+1.0),
-                                   127.0 * (sin(pixels[i*4+1])+1.0),
-                                   127.0 * (sin(pixels[i*4+2])+1.0),
-                                   127.0 * (sin(pixels[i*4+3])+1.0));
-        TexImage->setPixel(i%thisSize.width(),i/thisSize.width(),color->rgba());
-    }
-
-
-
-    texture = bindTexture(*TexImage);
-*/
+    //mGLann->propagateInput();
 }
 

@@ -4,15 +4,15 @@ TARGET = cube
 TEMPLATE = app
 
 SOURCES += main.cpp \
-    playground.cpp
+    playground.cpp \
+    glann.cpp
 
 qtHaveModule(opengl) {
     QT += opengl
 
-    SOURCES += mainwidget.cpp
+    SOURCES +=
 
-    HEADERS += \
-        mainwidget.h
+    HEADERS +=
 
     RESOURCES += \
         shaders.qrc
@@ -23,4 +23,5 @@ target.path = $$[QT_INSTALL_EXAMPLES]/opengl/cube
 INSTALLS += target
 
 HEADERS += \
-    playground.h
+    playground.h \
+    glann.h
