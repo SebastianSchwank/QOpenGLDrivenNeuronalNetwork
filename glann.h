@@ -7,12 +7,12 @@
 #include <QGLPixelBuffer>
 
 #include <QBasicTimer>
-
+#include <QTime>
 #include <QImage>
 #include <QVector>
 
 
-enum MODE{finished,fwPropagation,backPropagation};
+enum MODE{start,fwPropagation,fwFinished,backPropagation,backFinished};
 
 class GLANN : public QGLWidget,protected QGLFunctions
 {
@@ -38,6 +38,7 @@ protected:
 
 private:
     bool propagateInput();
+    bool propagateBckWrds();
     void justDrawMaps();
 
     void initShader();
@@ -55,11 +56,16 @@ private:
     GLuint pixelsActivation;
     GLuint pixelsWeightmap;
     unsigned char *renderedPropagation;
+    unsigned char *renderedWeights;
 
     unsigned int mNeurons;
     unsigned int propCycle;
 
-    MODE mode = finished;
+    MODE mode = start;
+
+    //Input Variables
+    unsigned int x;
+    unsigned int y;
 };
 
 #endif // GLANN_H

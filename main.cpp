@@ -51,14 +51,7 @@ int main(int argc, char *argv[])
     app.setApplicationName("GLANN");
     app.setApplicationVersion("0.1");
 #ifndef QT_NO_OPENGL
-    GLANN widget(500, new Playground(500));
-
-    QVector<unsigned int> input;
-    for(unsigned int i = 0; i < 500; i++){
-        input.append(0); //4294967295 MAX_ACTIVATION
-    }
-
-    widget.setInput(input);
+    GLANN widget(250, new Playground(250));
 
     widget.show();
 #else
