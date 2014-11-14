@@ -11,19 +11,17 @@ GLANN::GLANN(unsigned int neuronsCount, QImage *weightmap)
         mWeightmap->fill(qRgba(0,0,0,0));
     }else{
         mWeightmap = weightmap;
-        if(mWeightmap->width() != mWeightmap->height()){
+        if(mWeightmap->width()/2 != mWeightmap->height()){
             qDebug("Weightmap's height doesn't equal it's height ! Abort here.");
         }
-        if(mWeightmap->width() != neuronsCount){
+        if(mWeightmap->width()/2 != neuronsCount){
             qDebug("Weightmap's size doesn't eqal the neurons Count ! Abort here.");
         }
         mNeurons = neuronsCount;
     }
 
-    mPropagation = new QImage(neuronsCount,neuronsCount+1,QImage::Format_ARGB32);
+    mPropagation = new QImage(neuronsCount*2+1,neuronsCount,QImage::Format_ARGB32);
     mPropagation->fill(qRgba(0,0,0,0));
-
-    propCycle = 0;
 }
 
 
@@ -31,6 +29,8 @@ void GLANN::initializeGL(){
     initializeGLFunctions();
     initShader();
     initTextures();
+    // Use QBasicTimer because its faster than QTimer
+    timer.start(0, this);
 }
 
 void GLANN::resizeGL(int w, int h){
@@ -39,9 +39,13 @@ void GLANN::resizeGL(int w, int h){
 
 void GLANN::paintGL(){
 
+    if(mode == fwPropagation) if(propagateInput()) mode=finished;
+    if(mode == finished) justDrawMaps();
+}
 
-
-    propagateInput();
+void GLANN::timerEvent(QTimerEvent *)
+{
+    // Update scene
     update();
 }
 
@@ -50,7 +54,7 @@ void GLANN::initTextures(){
     glEnable(GL_TEXTURE_2D);
 
     //FEEDBACK Texture Propagtion + Corrected Weights
-    renderedPropagation = new GLuint[mNeurons*mNeurons*4];
+    renderedPropagation = new unsigned char [mNeurons*mNeurons*4];
 
     //Bind WeightmapTexture
     pixelsWeightmap = QGLWidget::bindTexture(*mWeightmap);
@@ -103,19 +107,23 @@ bool GLANN::setInput(QVector<unsigned int> input){
         return false;
     }
     for(int i = 0; i < mNeurons; i++){
-        mPropagation->setPixel(i,0,input[i]);
+        mPropagation->setPixel(0,i,input[i]);
     }
 
-    //Bind WeightmapTexture
-    pixelsActivation = bindTexture(*mPropagation);
-
+    propCycle = 0;
+    mode = fwPropagation;
     return true;
 }
 
-bool GLANN::propagateInput(){
+void GLANN::justDrawMaps(){
+    // SetMode
+    program.setUniformValue("mode", finished);
 
-    //Bind WeightmapTexture
+    //Bind ActivationMatrix
     pixelsActivation = bindTexture(*mPropagation);
+
+    //Load Identity
+    glLoadIdentity();
 
     //Move to rendering point
     glTranslatef( -1.0, -1.0, 0.0f );
@@ -135,34 +143,79 @@ bool GLANN::propagateInput(){
         glTexCoord2f( 1.f, 1.f ); glVertex2f( 2.0, 2.0);
         glTexCoord2f( 0.f, 1.f ); glVertex2f( 0, 2.0);
      glEnd();
+}
 
+bool GLANN::propagateInput(){
+
+    // SetMode
+    program.setUniformValue("mode", fwPropagation);
+
+    // Use texture unit 0 which contains cube.png
+    program.setUniformValue("propCycle", propCycle);
+
+    //Bind WeightmapTexture
+    pixelsActivation = bindTexture(*mPropagation);
+
+    //Load Identity
+    glLoadIdentity();
+
+    //Move to rendering point
+    glTranslatef( -1.0, -1.0, 0.0f );
+
+    glEnable(GL_TEXTURE_2D);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, pixelsWeightmap);
+
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, pixelsActivation);
+
+    // Draw geometry
+    //Render textured quad
+    glBegin( GL_QUADS );
+        glTexCoord2f( 0.f, 0.f ); glVertex2f( 0, 0);
+        glTexCoord2f( 1.f, 0.f ); glVertex2f( 2.0, 0);
+        glTexCoord2f( 1.f, 1.f ); glVertex2f( 2.0, 2.0);
+        glTexCoord2f( 0.f, 1.f ); glVertex2f( 0, 2.0);
+     glEnd();
 
     //geometries.drawCubeGeometry(&program);
 
+    propCycle++;
+
     //Playground TexImage(thisSize.width(), thisSize.height());
-    glReadPixels(0,0,1,mNeurons,GL_RGBA,GL_UNSIGNED_INT,renderedPropagation);
+    glReadPixels(propCycle+mNeurons,0,1,mNeurons,GL_RGBA,GL_UNSIGNED_BYTE,renderedPropagation);
 
     //qDebug("%i , %i" ,TexImage->size().width(),TexImage->size().height());
 
     for(int i = 0; i < mNeurons; i++){
-        mPropagation->setPixel(i,propCycle,renderedPropagation[i]);
+        mPropagation->setPixel(propCycle,i,
+                               qRgba(renderedPropagation[i*4],
+                                     renderedPropagation[i*4+1],
+                                     renderedPropagation[i*4+2],
+                                     renderedPropagation[i*4+3]));
     }
 
-    propCycle++;
-
-    update();
-
-    if(propCycle % mNeurons == 0) return true;
+    if(propCycle % mNeurons == 0){propCycle = 0; return true;}
     else return false;
+}
+
+unsigned int GLANN::convertPixels(unsigned int RGBA){
+    unsigned int Alpha = (RGBA & 15) << 24;
+    unsigned int ARGB = (RGBA >> 8) | Alpha;
+    return ARGB;
 }
 
 QVector<unsigned int> GLANN::getOutput(){
     QVector<unsigned int> output;
     for(int i = 0; i < mNeurons; i++){
-        unsigned int activation = mPropagation->pixel(i,mNeurons-1);
+        unsigned int activation = mPropagation->pixel(mNeurons,i);
         output.append(activation);
     }
     return output;
+}
+
+MODE GLANN::getMode(){
+    return mode;
 }
 
 unsigned int GLANN::getNeuronsCount(){

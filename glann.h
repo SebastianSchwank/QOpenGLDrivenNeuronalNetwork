@@ -6,8 +6,13 @@
 #include <QOpenGLFramebufferObject>
 #include <QGLPixelBuffer>
 
+#include <QBasicTimer>
+
 #include <QImage>
 #include <QVector>
+
+
+enum MODE{finished,fwPropagation,backPropagation};
 
 class GLANN : public QGLWidget,protected QGLFunctions
 {
@@ -17,8 +22,9 @@ public:
     GLANN(unsigned int neuronsCount, QImage *weightmap = 0);
 
     bool setInput(QVector<unsigned int> input);
-    bool propagateInput();
+    bool setError(QVector<unsigned int> error);
     QVector<unsigned int> getOutput();
+    MODE getMode();
 
     unsigned int getNeuronsCount();
 
@@ -28,9 +34,18 @@ protected:
     void resizeGL(int w, int h);
     void paintGL();
 
+    void timerEvent(QTimerEvent *);
+
 private:
+    bool propagateInput();
+    void justDrawMaps();
+
     void initShader();
     void initTextures();
+
+    unsigned int convertPixels(unsigned int RGBA);
+
+    QBasicTimer timer;
 
     QImage *mWeightmap;
     QImage *mPropagation;
@@ -39,10 +54,12 @@ private:
 
     GLuint pixelsActivation;
     GLuint pixelsWeightmap;
-    GLuint *renderedPropagation;
+    unsigned char *renderedPropagation;
 
     unsigned int mNeurons;
     unsigned int propCycle;
+
+    MODE mode = finished;
 };
 
 #endif // GLANN_H

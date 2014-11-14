@@ -25,3 +25,6 @@ INSTALLS += target
 HEADERS += \
     playground.h \
     glann.h
+
+OTHER_FILES += \
+    Temp.txt

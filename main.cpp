@@ -52,18 +52,19 @@ int main(int argc, char *argv[])
     app.setApplicationVersion("0.1");
 #ifndef QT_NO_OPENGL
     GLANN widget(500, new Playground(500));
+
+    QVector<unsigned int> input;
+    for(unsigned int i = 0; i < 500; i++){
+        input.append(0); //4294967295 MAX_ACTIVATION
+    }
+
+    widget.setInput(input);
+
     widget.show();
 #else
     QLabel note("OpenGL Support required");
     note.show();
 #endif
-
-    QVector<unsigned int> input;
-    for(int i = 0; i < input.size(); i++){
-        input.append(0);
-    }
-
-    while(widget.propagateInput());
 
     return app.exec();
 }
