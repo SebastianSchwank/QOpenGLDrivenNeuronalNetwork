@@ -1,12 +1,13 @@
-#version 330 core
+#version 400
 
 #ifdef GL_ES
-// Set default precision to medium
-precision mediump int;
-precision mediump float;
+// Set default precision to high
+precision highp int;
+precision highp float;
 #endif
 
 //ANN Shader
+
 #pragma STDGL invariant(all)
 
 uniform sampler2D IO;
@@ -17,53 +18,74 @@ uniform int imageSize;
 uniform int propCycle;
 uniform int mode; //0 is just drawing| 1 is fwd 2| is backward
 
+#pragma STDGL invariant(all)
 
-float b2f(vec4 fbytes) {
-    ivec4 bytes = ivec4(fbytes * 255.0 + 0.5);
-    float f = float(bytes[0] + bytes[1] * 256) +
-              float(bytes[2] - bytes[2] / 128 * 128 + 128) * 256.0 * 256.0;
-    int exp = 150 - (bytes[3] - bytes[3] / 128 * 128) * 2 - (bytes[2] / 128);
-    f /= exp2(float(exp));
-    if (bytes[3] / 128 == 1)
-        return -f;
-    else
-        return f;
+//unpack a 32bit float from 4 8bit, [0;1] clamped floats
+float b2f( vec4 _packed)
+{
+    vec4 rgba = 255.0 * _packed;
+    float sign =  step(-128.0, -rgba[1]) * 2.0 - 1.0;
+    float exponent = rgba[0] - 127.0;
+    if (abs(exponent + 127.0) < 0.001)
+        return 0.0;
+    float mantissa =  mod(rgba[1], 128.0) * 65536.0 + rgba[2] * 256.0 + rgba[3] + (0x800000);
+    return sign *  exp2(exponent-23.0) * mantissa ;
+
+
 }
 
-vec4 f2b(float f) {
-    bool pos = f > 0.0;
-    if (!pos)
-        f = -f;
-    int expo = int(floor(log2(f)));
-    f *= pow(2.0, 23.0 - float(expo));
-    f -= 8388608.0;
-    int b = int(floor(f + 0.5));
-    expo += 127;
-    int posbit = pos ? 0 : 128;
-    return vec4(b - b / 256 * 256, b / 256 - b / 256 / 256 * 256,
-                b / 256 / 256 + (expo - expo / 2 * 2) * 128,
-                expo / 2 + posbit) / 255.0;
+//pack a 32bit float into 4 8bit, [0;1] clamped floats
+vec4 f2b(float f)
+{
+    float F = abs(f);
+    if(F == 0.0)
+    {
+        return  vec4(0,0,0,0);
+    }
+    float Sign =  step(0.0, -f);
+    float Exponent = floor( log2(F));
+
+    float Mantissa = F/ exp2(Exponent);
+    //std::cout << "  sign: " << Sign << ", exponent: " << Exponent << ", mantissa: " << Mantissa << std::endl;
+    //denormalized values if all exponent bits are zero
+    if(Mantissa < 1.0)
+        Exponent -= 1;
+
+    Exponent +=  127;
+
+    vec4 rgba;
+    rgba[0] = Exponent;
+    rgba[1] = 128.0 * Sign +  mod(floor(Mantissa * float(128.0)),128.0);
+    rgba[2] = floor( mod(floor(Mantissa* exp2(float(23.0 - 8.0))), exp2(8.0)));
+    rgba[3] = floor( exp2(23.0)* mod(Mantissa, exp2(-15.0)));
+    return (1 / 255.0) * rgba;
 }
+
+
 void main()
 {
     ivec2 Coord = ivec2(gl_FragCoord);
     vec2 TexCoord = Coord;
-    vec4 currTexel = f2b(b2f(texture(texture,gl_TexCoord[0].st)));
+    vec4 currTexel = f2b(b2f(texture(texture,gl_TexCoord[0].st)));//-texture(texture,gl_TexCoord[0].st);
 
     if(mode == 1){
         if(Coord.x == propCycle+1+imageSize){
             float sum = 0.0;
 
-            float inputActivation = b2f(texelFetch(IO,ivec2(propCycle,Coord.y),0));
+            float inputActivation = b2f(texelFetch(IO,ivec2(propCycle,Coord.y),0))*2.0f-1.0f;
                 for(int x = 0; x < imageSize; x++){
-                    float weight = b2f(texelFetch(texture,ivec2(x,Coord.y),0));
+                    float weight = b2f(texelFetch(texture,ivec2(x,Coord.y),0))*2.0f-1.0f;
                     sum = sum + inputActivation * weight; //* inputActivation;
                 }
-            currTexel =  f2b((1.0/(1.0 + exp(-2.0 * sum)))); // ACTIVATION FUNCTION
+            float sigmond = (1.0/(1.0 + exp(-4.0 * sum)));// ACTIVATION FUNCTION
+            currTexel =  f2b(sigmond);
         }
     }
 
     if(mode == 3){
+        if(Coord.x <= imageSize){
+
+        }
 
     }
 

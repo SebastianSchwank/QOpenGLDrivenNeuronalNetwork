@@ -2,7 +2,7 @@
 
 GLANN::GLANN(unsigned int neuronsCount, QImage *weightmap)
 {
-    setFixedSize(neuronsCount*2,neuronsCount);
+    setFixedSize(neuronsCount*2+1,neuronsCount);
 
     qsrand((uint)QTime::currentTime().msec());
 
@@ -68,8 +68,8 @@ void GLANN::paintGL(){
         errorV[mNeurons] = error;
         setError(errorV);
     }
-    if(mode == backPropagation) if(propagateBckWrds()) mode = backFinished;
-    if(mode == backFinished) justDrawMaps();
+    //if(mode == backPropagation) if(propagateBckWrds()) mode = backFinished;
+    if(mode == backPropagation) justDrawMaps();
 }
 
 void GLANN::timerEvent(QTimerEvent *)

@@ -1,9 +1,9 @@
-#version 330 core
+#version 400
 
 #ifdef GL_ES
-// Set default precision to medium
-precision mediump int;
-precision mediump float;
+// Set default precision to high
+precision highp int;
+precision highp float;
 #endif
 
 void main() {
