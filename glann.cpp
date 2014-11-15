@@ -26,6 +26,13 @@ GLANN::GLANN(unsigned int neuronsCount, QImage *weightmap)
     mPropagation->fill(qRgba(0,0,0,0));
 }
 
+unsigned int convertToPixels(float activationFl){
+    return (activationFl || 0x0);
+}
+
+float convertFromPixels(unsigned int activationUI){
+    return (activationUI || 0x0);
+}
 
 void GLANN::initializeGL(){
     initializeGLFunctions();
@@ -45,11 +52,11 @@ void GLANN::paintGL(){
         for(unsigned int i = 0; i < mNeurons; i++){
             inputV.append(0); //4294967295 MAX_ACTIVATION
         }
-        x = ((qrand()+qrand()*RAND_MAX)%4294967296)/2;
-        y = ((qrand()+qrand()*RAND_MAX)%4294967296)/2;
+        x = ((qrand()+qrand()*RAND_MAX)%4294967296)/4294967296.0;
+        y = ((qrand()+qrand()*RAND_MAX)%4294967296)/4294967296.0;
 
-        inputV[0] = x;
-        inputV[1] = y;
+        inputV[0] = convertToPixels(x);
+        inputV[1] = convertToPixels(y);
 
         this->setInput(inputV);
     }
@@ -57,15 +64,15 @@ void GLANN::paintGL(){
     if(mode == fwPropagation) if(propagateInput()) mode=fwFinished;
     if(mode == fwFinished){
         QVector<unsigned int> out = getOutput();
-        unsigned int result = out[mNeurons];
-        unsigned int error = result - (x+y);
-        qDebug("%i + %i =? %i Error: %i",x,y,result,error);
+        float result = convertFromPixels(out[mNeurons]);
+        float error = result - (x+y);
+        qDebug("%f + %f =?guess: %f Error: %f",x,y,result,error);
 
         QVector<unsigned int> errorV;
         for(unsigned int i = 0; i < mNeurons; i++){
             errorV.append(0); //4294967295 MAX_ACTIVATION
         }
-        errorV[mNeurons] = error;
+        errorV[mNeurons] = convertToPixels(error);
         setError(errorV);
     }
     //if(mode == backPropagation) if(propagateBckWrds()) mode = backFinished;
@@ -285,10 +292,9 @@ bool GLANN::propagateBckWrds(){
     else return false;
 }
 
-unsigned int GLANN::convertPixels(unsigned int RGBA){
-    unsigned int Alpha = (RGBA & 15) << 24;
-    unsigned int ARGB = (RGBA >> 8) | Alpha;
-    return ARGB;
+unsigned int GLANN::convertPixels(float activationFl){
+    unsigned int activationUI = (activationFl || 0x00);
+    return activationUI;
 }
 
 QVector<unsigned int> GLANN::getOutput(){

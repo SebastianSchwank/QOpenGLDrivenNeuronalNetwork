@@ -11,6 +11,8 @@
 #include <QImage>
 #include <QVector>
 
+#include "playground.h"
+
 
 enum MODE{start,fwPropagation,fwFinished,backPropagation,backFinished};
 
@@ -19,7 +21,7 @@ class GLANN : public QGLWidget,protected QGLFunctions
     Q_OBJECT
 
 public:
-    GLANN(unsigned int neuronsCount, QImage *weightmap = 0);
+    GLANN(unsigned int neuronsCount, Playground *weightmap = 0);
 
     bool setInput(QVector<unsigned int> input);
     bool setError(QVector<unsigned int> error);
@@ -44,7 +46,8 @@ private:
     void initShader();
     void initTextures();
 
-    unsigned int convertPixels(unsigned int RGBA);
+    unsigned int convertToPixels(float activationFl);
+    float convertFromPixels(unsigned int activationUI);
 
     QBasicTimer timer;
 
@@ -64,8 +67,8 @@ private:
     MODE mode = start;
 
     //Input Variables
-    unsigned int x;
-    unsigned int y;
+    float x;
+    float y;
 };
 
 #endif // GLANN_H

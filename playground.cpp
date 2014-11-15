@@ -14,3 +14,11 @@ Playground::Playground(unsigned int neurons)
         }
     }
 }
+
+unsigned int convertToPixels(float activationFl){
+    return (activationFl || 0x0);
+}
+
+float convertFromPixels(unsigned int activationUI){
+    return (activationUI || 0x0);
+}

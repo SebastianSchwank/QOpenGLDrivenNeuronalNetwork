@@ -2,8 +2,8 @@
 
 #ifdef GL_ES
 // Set default precision to high
-precision highp int;
-precision highp float;
+precision mediump int;
+precision mediump float;
 #endif
 
 void main() {

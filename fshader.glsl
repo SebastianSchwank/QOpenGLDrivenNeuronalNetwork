@@ -2,8 +2,8 @@
 
 #ifdef GL_ES
 // Set default precision to high
-precision highp int;
-precision highp float;
+precision mediump int;
+precision mediump float;
 #endif
 
 //ANN Shader
@@ -18,8 +18,6 @@ uniform int imageSize;
 uniform int propCycle;
 uniform int mode; //0 is just drawing| 1 is fwd 2| is backward
 
-#pragma STDGL invariant(all)
-
 //unpack a 32bit float from 4 8bit, [0;1] clamped floats
 float b2f( vec4 _packed)
 {
@@ -30,8 +28,6 @@ float b2f( vec4 _packed)
         return 0.0;
     float mantissa =  mod(rgba[1], 128.0) * 65536.0 + rgba[2] * 256.0 + rgba[3] + (0x800000);
     return sign *  exp2(exponent-23.0) * mantissa ;
-
-
 }
 
 //pack a 32bit float into 4 8bit, [0;1] clamped floats
@@ -61,7 +57,6 @@ vec4 f2b(float f)
     return (1 / 255.0) * rgba;
 }
 
-
 void main()
 {
     ivec2 Coord = ivec2(gl_FragCoord);
@@ -70,15 +65,15 @@ void main()
 
     if(mode == 1){
         if(Coord.x == propCycle+1+imageSize){
-            float sum = 0.0;
+            highp float sum = 0.0;
 
-            float inputActivation = b2f(texelFetch(IO,ivec2(propCycle,Coord.y),0))*2.0f-1.0f;
+            float inputActivation = b2f(texelFetch(IO,ivec2(propCycle,Coord.y),0));
                 for(int x = 0; x < imageSize; x++){
-                    float weight = b2f(texelFetch(texture,ivec2(x,Coord.y),0))*2.0f-1.0f;
+                    float weight = b2f(texelFetch(texture,ivec2(x,Coord.y),0));
                     sum = sum + inputActivation * weight; //* inputActivation;
                 }
             float sigmond = (1.0/(1.0 + exp(-4.0 * sum)));// ACTIVATION FUNCTION
-            currTexel =  f2b(sigmond);
+            currTexel =  f2b((float(Coord.x)/float(imageSize)));
         }
     }
 
