@@ -21,7 +21,7 @@ class GLANN : public QGLWidget,protected QGLFunctions
     Q_OBJECT
 
 public:
-    GLANN(unsigned int neuronsCount, Playground *weightmap = 0);
+    GLANN(unsigned int neuronsCount, QImage *weightmap = 0);
 
     bool setInput(QVector<unsigned int> input);
     bool setError(QVector<unsigned int> error);
@@ -43,11 +43,10 @@ private:
     bool propagateBckWrds();
     void justDrawMaps();
 
+    void getFeedbackTexture(unsigned int propCycle);
+
     void initShader();
     void initTextures();
-
-    unsigned int convertToPixels(float activationFl);
-    float convertFromPixels(unsigned int activationUI);
 
     QBasicTimer timer;
 
@@ -67,8 +66,8 @@ private:
     MODE mode = start;
 
     //Input Variables
-    float x;
-    float y;
+    Playground::FloatBits x;
+    Playground::FloatBits y;
 };
 
 #endif // GLANN_H

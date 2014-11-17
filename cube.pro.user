@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE QtCreatorProject>
-<!-- Written by QtCreator 3.2.0, 2014-11-13T21:21:52. -->
+<!-- Written by QtCreator 3.2.0, 2014-11-17T13:52:55. -->
 <qtcreator>
  <data>
   <variable>EnvironmentId</variable>
@@ -252,8 +252,8 @@
      <value type="int">14</value>
     </valuelist>
     <value type="QString" key="ProjectExplorer.ProjectConfiguration.DefaultDisplayName">Run on Android device</value>
-    <value type="QString" key="ProjectExplorer.ProjectConfiguration.DisplayName"></value>
-    <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">Qt4ProjectManager.AndroidRunConfiguration:C:/Qt5/Examples/Qt-5.3/opengl/cube/cube.pro</value>
+    <value type="QString" key="ProjectExplorer.ProjectConfiguration.DisplayName">Run on Android device2</value>
+    <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">Qt4ProjectManager.AndroidRunConfiguration:C:/Users/Sebastian/Documents/GitHub/cube/QOpenGLDrivenNeuronalNetwork/cube.pro</value>
     <value type="QString" key="Qt4ProjectManager.Qt4RunConfiguration.ProFile">cube.pro</value>
     <value type="uint" key="RunConfiguration.QmlDebugServerPort">3768</value>
     <value type="bool" key="RunConfiguration.UseCppDebugger">false</value>

@@ -7,13 +7,17 @@
 
 #include <qmath.h>
 
-class Playground : public QVector< QVector<float> >
+class Playground : public QImage
 {
 public:
     Playground(unsigned int neurons);
 
-    unsigned int convertToPixels(float activationFl);
-    float convertFromPixels(unsigned int activationUI);
+    typedef union
+    {
+        float f_;
+        unsigned int i_;
+    } FloatBits;
+
 };
 
 #endif // PLAYGROUND_H

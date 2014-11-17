@@ -1,22 +1,15 @@
 #version 400
 
-#ifdef GL_ES
-// Set default precision to high
-precision mediump int;
-precision mediump float;
-#endif
-
 //ANN Shader
-
-#pragma STDGL invariant(all)
 
 uniform sampler2D IO;
 
-uniform sampler2D texture;
+uniform sampler2D weights;
 uniform int imageSize;
 
 uniform int propCycle;
 uniform int mode; //0 is just drawing| 1 is fwd 2| is backward
+
 
 //unpack a 32bit float from 4 8bit, [0;1] clamped floats
 float b2f( vec4 _packed)
@@ -28,6 +21,8 @@ float b2f( vec4 _packed)
         return 0.0;
     float mantissa =  mod(rgba[1], 128.0) * 65536.0 + rgba[2] * 256.0 + rgba[3] + (0x800000);
     return sign *  exp2(exponent-23.0) * mantissa ;
+
+
 }
 
 //pack a 32bit float into 4 8bit, [0;1] clamped floats
@@ -61,19 +56,24 @@ void main()
 {
     ivec2 Coord = ivec2(gl_FragCoord);
     vec2 TexCoord = Coord;
-    vec4 currTexel = f2b(b2f(texture(texture,gl_TexCoord[0].st)));//-texture(texture,gl_TexCoord[0].st);
+    vec4 currTexel =  f2b(b2f(texelFetch(weights,ivec2(Coord.x,Coord.y),0)));
 
     if(mode == 1){
-        if(Coord.x == propCycle+1+imageSize){
-            highp float sum = 0.0;
 
-            float inputActivation = b2f(texelFetch(IO,ivec2(propCycle,Coord.y),0));
-                for(int x = 0; x < imageSize; x++){
-                    float weight = b2f(texelFetch(texture,ivec2(x,Coord.y),0));
-                    sum = sum + inputActivation * weight; //* inputActivation;
-                }
-            float sigmond = (1.0/(1.0 + exp(-4.0 * sum)));// ACTIVATION FUNCTION
-            currTexel =  f2b((float(Coord.x)/float(imageSize)));
+        if(Coord.x >= imageSize){
+        currTexel =  texelFetch(IO,ivec2(Coord.x-imageSize,Coord.y),0);
+
+            if(Coord.x == 1+propCycle+imageSize){
+                float sum = 0.0;
+
+                float inputActivation = b2f(texelFetch(IO,ivec2(0,Coord.y),0));
+                //    for(int x = 0; x < imageSize; x++){
+                //        highp float weight = b2f(texelFetch(weights,ivec2(x,Coord.y),0));
+                //        sum = sum + inputActivation * weight; //* inputActivation;
+                //    }
+                //float sigmond = (1.0/(1.0 + exp(-2.0 * sum)));// ACTIVATION FUNCTION
+                currTexel =  f2b(inputActivation);
+            }
         }
     }
 
