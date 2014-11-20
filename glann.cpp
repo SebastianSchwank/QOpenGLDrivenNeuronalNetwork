@@ -2,7 +2,7 @@
 
 GLANN::GLANN(unsigned int neuronsCount, QImage *weightmap)
 {
-    setFixedSize(neuronsCount*2+1,neuronsCount);
+    setFixedSize(neuronsCount*2+5,neuronsCount);
 
     qsrand((uint)QTime::currentTime().msec());
 
@@ -18,6 +18,8 @@ GLANN::GLANN(unsigned int neuronsCount, QImage *weightmap)
 
     mPropagation = new QImage(neuronsCount,neuronsCount,QImage::Format_ARGB32);
     mPropagation->fill(qRgba(0,0,0,0));
+
+    sumDeltas = new QImage(neuronsCount,neuronsCount,QImage::Format_ARGB32);
 }
 
 void GLANN::initializeGL(){
@@ -37,17 +39,17 @@ void GLANN::paintGL(){
         QVector<unsigned int> inputV;
         for(unsigned int i = 0; i < mNeurons; i++){
             Playground::FloatBits act;
-            act.f_ = 1.0;
+            act.f_ = 0.0;
             inputV.append(act.i_); //4294967295 MAX_ACTIVATION
         }
-        //x.f_ = 1.0;
-        //y.f_ = 2.0;
+        x.f_ = ((1.0*(qrand()%RAND_MAX))/RAND_MAX); //SCALE OUTPUT VALUE !
+        //y.f_ = ((1.0*(qrand()%RAND_MAX))/RAND_MAX)/10.0;
 
-        //inputV[0] = x.i_;
+        inputV[0] = x.i_;
         //inputV[1] = y.i_;
 
         this->setInput(inputV);
-        propCycle = 0;
+        propCycle = 1;
         mode = fwPropagation;
     }
 
@@ -55,24 +57,34 @@ void GLANN::paintGL(){
     if(mode == fwFinished){
         QVector<unsigned int> out = getOutput();
         Playground::FloatBits result;
-        for(int i = 0; i < mNeurons; i++){
-            result.i_ = out[i];
-            qDebug() << result.f_;
-        }
-        Playground::FloatBits error;
-        error.f_ = result.f_ - (x.f_+y.f_);
-        qDebug("%f + %f =?guess: %f Error: %f",x.f_,y.f_,result.f_,error.f_);
+        //Playground::FloatBits error1;
+        Playground::FloatBits error2;
+        //result.i_ = out[mNeurons-1];
+        //qDebug() << "x: " << y.f_ << "=? " << result.f_ << "Error: " << y.f_-result.f_;
+        //error1.f_ = (y.f_-result.f_) * result.f_ * (1.0-result.f_);
 
-        QVector<unsigned int> errorV;
+        result.i_ = out[1];
+        qDebug() << "y: " << x.f_ << "=? " << result.f_ << "Error: " << (x.f_-result.f_);
+        error2.f_ = (x.f_-result.f_) * result.f_ * (1.0-result.f_);;
+
+        qDebug() << "--------------------------------------------";
+
+        QVector<unsigned int> Error;
         for(unsigned int i = 0; i < mNeurons; i++){
-            errorV.append(0); //4294967295 MAX_ACTIVATION
+            Error.append(0); //4294967295 MAX_ACTIVATION
         }
-        errorV[mNeurons] = error.i_;
-        setError(errorV);
+        Error[1] = error2.i_ ;
+        //Error[mNeurons-2] = error2.i_;
+        setError(Error);
         mode = backPropagation;
+        propCycle = mNeurons-2;
+        sumDeltas->fill(qRgba(0,0,0,0));
     }
-    //if(mode == backPropagation) if(propagateBckWrds()) mode = backFinished;
-    if(mode == backPropagation) justDrawMaps();
+    if(mode == backPropagation) if(propagateBckWrds()) mode = backFinished;
+    if(mode == backFinished){
+        normalizeDeltaWeights();
+        mode = start;
+    }
 }
 
 void GLANN::timerEvent(QTimerEvent *)
@@ -213,24 +225,28 @@ bool GLANN::propagateInput(){
 
     //geometries.drawCubeGeometry(&program);
 
-    propCycle++;
-
     getFeedbackTexture(propCycle);
 
-    if(propCycle % mNeurons == mNeurons-1)return true;
+    propCycle++;
+
+    if(propCycle % mNeurons == 0)return true;
     else return false;
 }
 
 bool GLANN::propagateBckWrds(){
 
+
     // SetMode
-    program.setUniformValue("mode", fwPropagation);
+    program.setUniformValue("mode", backPropagation);
 
     // Use texture unit 0 which contains cube.png
     program.setUniformValue("propCycle", propCycle);
 
-    //Bind WeightmapTexture
+    //Bind Propagation Map
     pixelsActivation = bindTexture(*mPropagation);
+
+    //Bind Weightmap
+    pixelsWeightmap = bindTexture(*mWeightmap);
 
     //Load Identity
     glLoadIdentity();
@@ -256,25 +272,51 @@ bool GLANN::propagateBckWrds(){
 
     //geometries.drawCubeGeometry(&program);
 
+    getFeedbackTexture(propCycle);
+    getCorrectedWeights();
+
     propCycle--;
 
-    //Playground TexImage(thisSize.width(), thisSize.height());
-    glReadPixels(propCycle+mNeurons,0,1,mNeurons,GL_RGBA,GL_UNSIGNED_BYTE,renderedPropagation);
+    //qDebug() << "BCKWRDS PROP" << propCycle;
 
-    //qDebug("%i , %i" ,TexImage->size().width(),TexImage->size().height());
-
-    for(int i = 0; i < mNeurons; i++){
-        mPropagation->setPixel(propCycle,i,
-                               qRgba(renderedPropagation[i*4],
-                                     renderedPropagation[i*4+1],
-                                     renderedPropagation[i*4+2],
-                                     renderedPropagation[i*4+3]));
-    }
-
-    if(propCycle % mNeurons == 0){propCycle = 0; return true;}
+    if(propCycle == 1){return true;}
     else return false;
 }
 
+void GLANN::getCorrectedWeights(){
+
+    //Playground TexImage(thisSize.width(), thisSize.height());
+    glReadPixels(0,0,mNeurons,mNeurons,GL_RGBA,GL_UNSIGNED_BYTE,renderedWeights);
+
+    //qDebug("%i , %i" ,TexImage->size().width(),TexImage->size().height());
+
+    for(int i = 0; i < mNeurons*mNeurons; i++){
+        Playground::FloatBits currDelta;
+        currDelta.i_ = qRgba(renderedWeights[i*4],renderedWeights[i*4+1],renderedWeights[i*4+2],renderedWeights[i*4+3]);
+        Playground::FloatBits accDelta;
+        accDelta.i_ = sumDeltas->pixel(i%mNeurons,(mNeurons-1)-(i/mNeurons));
+
+        accDelta.f_ += currDelta.f_;
+
+        sumDeltas->setPixel(i%mNeurons,(mNeurons-1)-(i/mNeurons),accDelta.i_);
+    }
+
+}
+
+void GLANN::normalizeDeltaWeights(){
+    for(int i = 0; i < mNeurons*mNeurons; i++){
+        Playground::FloatBits accDelta;
+        accDelta.i_ = sumDeltas->pixel(i%mNeurons,(mNeurons-1)-(i/mNeurons));
+
+        accDelta.f_ = accDelta.f_/mNeurons;
+
+        Playground::FloatBits weights;
+        weights.i_ = mWeightmap->pixel(i%mNeurons,(mNeurons-1)-(i/mNeurons));
+
+        weights.f_ += accDelta.f_;
+        mWeightmap->setPixel(i%mNeurons,(mNeurons-1)-(i/mNeurons),weights.i_);
+    }
+}
 
 void GLANN::getFeedbackTexture(unsigned int propCycle){
 
@@ -284,7 +326,7 @@ void GLANN::getFeedbackTexture(unsigned int propCycle){
     //qDebug("%i , %i" ,TexImage->size().width(),TexImage->size().height());
 
     for(int i = 0; i < mNeurons; i++){
-        mPropagation->setPixel(propCycle,i,
+        mPropagation->setPixel(propCycle,(mNeurons-1)-i,
                                qRgba(renderedPropagation[i*4],
                                      renderedPropagation[i*4+1],
                                      renderedPropagation[i*4+2],
@@ -295,7 +337,7 @@ void GLANN::getFeedbackTexture(unsigned int propCycle){
 
 QVector<unsigned int> GLANN::getOutput(){
     QVector<unsigned int> output;
-    for(int i = mNeurons-1; i >= 0; i--){
+    for(int i = 0; i <= mNeurons-1; i++){
         unsigned int activation = mPropagation->pixel(mNeurons-1,i);
         output.append(activation);
     }

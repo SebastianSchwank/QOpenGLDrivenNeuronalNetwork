@@ -1,4 +1,4 @@
-#version 400
+#version 440
 
 //ANN Shader
 
@@ -11,45 +11,16 @@ uniform int propCycle;
 uniform int mode; //0 is just drawing| 1 is fwd 2| is backward
 
 
-//unpack a 32bit float from 4 8bit, [0;1] clamped floats
 float b2f( vec4 _packed)
 {
-    vec4 rgba = 255.0 * _packed;
-    float sign =  step(-128.0, -rgba[1]) * 2.0 - 1.0;
-    float exponent = rgba[0] - 127.0;
-    if (abs(exponent + 127.0) < 0.001)
-        return 0.0;
-    float mantissa =  mod(rgba[1], 128.0) * 65536.0 + rgba[2] * 256.0 + rgba[3] + (0x800000);
-    return sign *  exp2(exponent-23.0) * mantissa ;
-
-
+    uint valueUINT = packUnorm4x8(_packed);
+    return uintBitsToFloat(valueUINT);
 }
 
-//pack a 32bit float into 4 8bit, [0;1] clamped floats
 vec4 f2b(float f)
 {
-    float F = abs(f);
-    if(F == 0.0)
-    {
-        return  vec4(0,0,0,0);
-    }
-    float Sign =  step(0.0, -f);
-    float Exponent = floor( log2(F));
-
-    float Mantissa = F/ exp2(Exponent);
-    //std::cout << "  sign: " << Sign << ", exponent: " << Exponent << ", mantissa: " << Mantissa << std::endl;
-    //denormalized values if all exponent bits are zero
-    if(Mantissa < 1.0)
-        Exponent -= 1;
-
-    Exponent +=  127;
-
-    vec4 rgba;
-    rgba[0] = Exponent;
-    rgba[1] = 128.0 * Sign +  mod(floor(Mantissa * float(128.0)),128.0);
-    rgba[2] = floor( mod(floor(Mantissa* exp2(float(23.0 - 8.0))), exp2(8.0)));
-    rgba[3] = floor( exp2(23.0)* mod(Mantissa, exp2(-15.0)));
-    return (1 / 255.0) * rgba;
+    uint valueUINT = floatBitsToUint(f);
+    return unpackUnorm4x8(valueUINT);
 }
 
 void main()
@@ -58,28 +29,55 @@ void main()
     vec2 TexCoord = Coord;
     vec4 currTexel =  f2b(b2f(texelFetch(weights,ivec2(Coord.x,Coord.y),0)));
 
+    float learningRate = 0.25;
+    float bias = 0.4;
+
     if(mode == 1){
 
         if(Coord.x >= imageSize){
         currTexel =  texelFetch(IO,ivec2(Coord.x-imageSize,Coord.y),0);
 
-            if(Coord.x == 1+propCycle+imageSize){
-                float sum = 0.0;
+            if(Coord.x == propCycle+imageSize){
+                highp float sum = 0.0;
 
-                float inputActivation = b2f(texelFetch(IO,ivec2(0,Coord.y),0));
-                //    for(int x = 0; x < imageSize; x++){
-                //        highp float weight = b2f(texelFetch(weights,ivec2(x,Coord.y),0));
-                //        sum = sum + inputActivation * weight; //* inputActivation;
-                //    }
-                //float sigmond = (1.0/(1.0 + exp(-2.0 * sum)));// ACTIVATION FUNCTION
-                currTexel =  f2b(inputActivation);
+                    for(int i = 0; i < imageSize; i++){
+                        float inputActivation = b2f(texelFetch(IO,ivec2(propCycle-1,i),0));
+                        float weight = b2f(texelFetch(weights,ivec2(Coord.y,i),0));
+                        sum = sum + inputActivation * weight; //* inputActivation;
+                    }
+                float sigmond = (1.0/(1.0 + exp(sum + bias)));// ACTIVATION FUNCTION
+                currTexel =  f2b(sigmond);
             }
         }
     }
 
     if(mode == 3){
-        if(Coord.x <= imageSize){
 
+        if(Coord.x >= imageSize){
+
+            if(Coord.x == propCycle+imageSize){
+                highp float errorSumWeighted = 0.0;
+
+                for(int i = 0; i < imageSize; i++){
+                    float outputError = b2f(texelFetch(IO,ivec2(propCycle+1,i),0));
+                    //Weight from N(i) to N(Coord.y)
+                    float weight = b2f(texelFetch(weights,ivec2(i,Coord.y),0));
+                    errorSumWeighted = errorSumWeighted + outputError * weight;
+                }
+
+                float mActivation = b2f(texelFetch(IO,ivec2(propCycle,Coord.y),0));
+                currTexel = f2b(errorSumWeighted * mActivation * (1.0-mActivation));
+            }else{
+                currTexel = texelFetch(IO,ivec2(Coord.x-imageSize,Coord.y),0);
+            }
+
+        }else{
+            //Weight from N(Coord.x) to N(Coord.y)
+            float currWeight = b2f(texelFetch(weights,ivec2(Coord.x,Coord.y),0));
+            float mActivation = b2f(texelFetch(IO,ivec2(propCycle,Coord.x),0));
+            float Error = b2f(texelFetch(IO,ivec2(propCycle+1,Coord.y),0));
+
+            currTexel = f2b(mActivation * Error * learningRate);
         }
 
     }

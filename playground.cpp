@@ -9,7 +9,7 @@ Playground::Playground(unsigned int neurons)
             //QRgb col = qRgba(((float)x/this->width())*255,((float)y/this->height())*255,0,255);
 
             FloatBits weight;
-            weight.f_ = 1.0;//(2.0*qrand()/RAND_MAX-1.0);
+            weight.f_ = 1.0;//(2.0*qrand()/RAND_MAX-1.0)*1.0;//[-1-1]
             this->setPixel(x,y,weight.i_);
         }
     }

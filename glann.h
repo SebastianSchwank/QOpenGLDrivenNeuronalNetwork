@@ -44,6 +44,8 @@ private:
     void justDrawMaps();
 
     void getFeedbackTexture(unsigned int propCycle);
+    void getCorrectedWeights();
+    void normalizeDeltaWeights();
 
     void initShader();
     void initTextures();
@@ -52,6 +54,8 @@ private:
 
     QImage *mWeightmap;
     QImage *mPropagation;
+
+    QImage *sumDeltas;
 
     QGLShaderProgram program;
 
